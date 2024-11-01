@@ -28,7 +28,7 @@ PRIMARYDEVICE=
 cd $TEMPDIR
 
 echo "Generating busybox progs..."
-mkdir -p bin dev media
+mkdir -p bin dev media proc sys
 cp /bin/busybox bin/ || show_err "busybox missing in system"
 for prog in `busybox --list`; do
     ln -s busybox bin/$prog || show_err "ln"
@@ -41,6 +41,11 @@ while read line; do
     [[ ${words[1]} == "/" ]] && PRIMARYDEVICE="${words[0]}"
 done < /etc/fstab
 
+if [[ -z $PRIMARYDEVICE ]]; then
+    echo "Primary device is not defined in /etc/fstab!"
+    exit 1
+fi
+
 cat > init << EOF
 #!/bin/sh
 
@@ -50,6 +55,8 @@ err() {
 }
 
 mount -t devtmpfs none /dev || err
+mount -t proc none /proc || err
+mount -t sysfs none /sys || err
 mount $PRIMARYDEVICE /media || err
 
 exec switch_root /media /bin/init
