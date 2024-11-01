@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Sourim-Install-Scripts
+# Copyright (C) 2024 r2team
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+show_err() {
+    echo "err: $1"
+    exit 1
+}
+
+TEMPDIR=`mktemp -d`
+ROOTDIR="$PWD"
+PRIMARYDEVICE=
+
+cd $TEMPDIR
+
+echo "Generating busybox progs..."
+mkdir -p bin dev media
+cp /bin/busybox bin/ || show_err "busybox missing in system"
+for prog in `busybox --list`; do
+    ln -s busybox bin/$prog || show_err "ln"
+done
+
+echo "Search primary device..."
+while read line; do
+    words=($line)
+
+    [[ ${words[1]} == "/" ]] && PRIMARYDEVICE="${words[0]}"
+done < /etc/fstab
+
+cat > init << EOF
+#!/bin/sh
+
+err() {
+    /bin/sh
+    sleep 99999
+}
+
+mount -t devtmpfs none /dev || err
+mount $PRIMARYDEVICE /media || err
+
+exec switch_root /media /bin/init
+EOF
+chmod +x init
+
+echo "Generating initramfs..."
+find . -print0 | cpio --null -ov --format=newc | gzip -9 > /boot/initramfs || show_err "creating cpio image"
+
+cd -
+
+rm -rf $TEMPDIR

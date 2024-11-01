@@ -1,0 +1,4 @@
+#!/bin/bash
+
+mkdir -p $DESTDIR/usr/bin
+install -m 755 gen-initramfs $DESTDIR/usr/bin
