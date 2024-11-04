@@ -2,3 +2,4 @@
 
 mkdir -p $DESTDIR/usr/bin
 install -m 755 gen-initramfs $DESTDIR/usr/bin
+install -m 755 schroot $DESTDIR/usr/bin

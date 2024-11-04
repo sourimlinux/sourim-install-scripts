@@ -1,0 +1,30 @@
+#!/bin/bash
+
+err() {
+	echo "$@" >&2
+	exit 1
+}
+
+if [[ "$(id -u)" -ne 0 ]]; then
+	err 'schroot needs to run as root'
+fi
+
+CHROOT="$1"
+
+mkdir -p $CHROOT/{proc,sys,dev,etc}
+
+mount -t devtmpfs none $CHROOT/dev
+mount -t sysfs none $CHROOT/sys
+mount -t proc none $CHROOT/proc
+
+touch "$CHROOT/etc/resolv.conf"
+mount --bind /etc/resolv.conf "$CHROOT/etc/resolv.conf"
+
+cleanup() {
+	umount -R -l "$CHROOT/dev" "$CHROOT/proc" "$CHROOT/sys" "$CHROOT/etc/resolv.conf"
+}
+
+trap cleanup EXIT SIGINT
+
+export PS1="[chroot] $PS1"
+chroot "$CHROOT" ${@:2}
